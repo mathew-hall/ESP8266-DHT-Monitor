@@ -13,3 +13,9 @@ Launch the `listen.sh` script on the host the ESP firmware sends the data to. By
 If running on a separate server to the monitor, copy the `temperature.csv` file to the Shiny host. The app needs the `dplyr`,`reshape2`,`ggplot2` and `shiny` packages to be installed.
 
 To launch the app, change to the `app` directory, start an R session and run `shiny::runApp()`.
+
+#License
+
+All code in this repository is licensed under the Beer-ware License Revision 42:
+
+"THE BEER-WARE LICENSE" (Revision 42): Mathew Hall wrote these files. As long as you retain this notice you can do whatever you want with this stuff. If we meet some day, and you think this stuff is worth it, you can buy me a beer in return.
