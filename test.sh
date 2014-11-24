@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -x
 
 test -f test.csv && rm test.csv
 ./listen.sh test.csv &
