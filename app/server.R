@@ -11,7 +11,12 @@ data$Date <- as.POSIXct(strptime(data$Date, format="%F %T"))
 
 long <- melt(data, measure.var=c("Temperature", "Humidity"))
 
+#Rescale old values if they're out of the expected range
 long$value <- long$value * ifelse(long$value <= 5,10,1)
+
+long <- long %>% filter(value != 0)
+
+theme_set(theme_minimal())
 
 shinyServer(function(input, output){
   
@@ -22,6 +27,9 @@ shinyServer(function(input, output){
 		}
 		if(input$smooth){
 			plot <- plot + geom_smooth()
+		}
+		if(input$rug){
+			plot <- plot + geom_rug(sides="b", alpha=0.2, colour="black",size=0.1)
 		}
 		plot
   })
