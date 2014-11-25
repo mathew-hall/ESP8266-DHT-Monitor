@@ -11,10 +11,19 @@ data$Date <- as.POSIXct(strptime(data$Date, format="%F %T"))
 
 long <- melt(data, measure.var=c("Temperature", "Humidity"))
 
+long$value <- long$value * ifelse(long$value <= 5,10,1)
+
 shinyServer(function(input, output){
   
   output$plot <- renderPlot({
-    long %>% ggplot(aes(Date, value, colour=variable)) + geom_line()
+    plot <- long %>% ggplot(aes(Date, value, colour=variable)) 
+		if(input$raw){
+			plot <- plot + geom_line()
+		}
+		if(input$smooth){
+			plot <- plot + geom_smooth()
+		}
+		plot
   })
   
 })
