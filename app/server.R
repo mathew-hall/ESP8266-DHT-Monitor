@@ -18,25 +18,26 @@ data <- data %>%
 	)
 
 data$Date <- as.POSIXct(strptime(data$Date, format="%F %T"))
-data$SMA.Temperature <- rollmean(data$Temperature,15,fill="expand")
-data$SMA.Humidity <- rollmean(data$Humidity,15,fill="expand")
-long <- melt(data, measure.vars=c("Temperature", "Humidity", "SMA.Temperature","SMA.Humidity"))
 
-#Rescale old values if they're out of the expected range
-long$value <- long$value * ifelse(long$value <= 5,10,1)
 
 
 
 theme_set(theme_minimal())
 
 shinyServer(function(input, output){
+	
+	wide <- reactive({data$SMA.Temperature <- rollmean(data$Temperature,input$sma_window,fill="expand")
+data$SMA.Humidity <- rollmean(data$Humidity,input$sma_window,fill="expand")
+data})
+	
+long <- reactive({melt(wide(), measure.vars=c("Temperature", "Humidity", "SMA.Temperature","SMA.Humidity"))})
   
   output$plot <- renderPlot({
     variables <- c("Temperature","Humidity")
     if(input$sma){
       variables <- c("SMA.Temperature","SMA.Humidity")
     }
-  plot <- long %>% filter(variable %in% variables)%>% ggplot(aes(Date, value, colour=variable)) 
+  plot <- long() %>% filter(variable %in% variables)%>% ggplot(aes(Date, value, colour=variable)) 
 		if(input$raw){
 			plot <- plot + geom_line()
 		}
