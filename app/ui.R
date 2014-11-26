@@ -6,6 +6,7 @@ shinyUI(fluidPage(
       sidebarLayout(
         sidebarPanel("Options", 
 					checkboxInput("Smooth values",inputId="smooth",F),
+                    checkboxInput("Moving average", inputId="sma",F),
 					checkboxInput("Show raw", inputId="raw", T),
 					checkboxInput("Show rug", inputId="rug", F)),
         mainPanel(plotOutput(outputId = "plot"))
