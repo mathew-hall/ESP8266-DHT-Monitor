@@ -51,7 +51,7 @@ long <- reactive({melt(wide(), measure.vars=c("Temperature", "Humidity", "SMA.Te
 		if(input$rug){
 			plot <- plot + geom_rug(sides="b", alpha=0.2, colour="black",size=0.1)
 		}
-		plot <- plot + scale_x_datetime(breaks=date_breaks("4 hour"), minor_breaks=date_breaks("1 hour"), labels=date_format("%d %b %H:%M"))  + theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) + xlab("\n\nTime") + facet_grid(variable ~ .)
+		plot <- plot + scale_x_datetime(breaks=date_breaks("4 hour"), minor_breaks=date_breaks("1 hour"), labels=date_format("%d %b %H:%M"))  + theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) + xlab("\n\nTime") + facet_grid(variable ~ ., scales="free_y")
 		
 		#
 		plot
