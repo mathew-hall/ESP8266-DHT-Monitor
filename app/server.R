@@ -10,13 +10,29 @@ db <- src_mysql("sensors", "bmo.local", user="", port=3306)
 
 data <- tbl(db, "logs")
 
+dates <- data %>% summarise(min = min(date), max=max(date)) %>% collect
+date.min <- dates$min[1]
+date.max <- dates$max[1]
 
 theme_set(theme_minimal())
 
 shinyServer(function(input, output){
 	
+	output$daterange <- renderUI({
+		dateRangeInput("dates","Date Range:", min=date.min, max=date.max)
+		})
+	
 	long <- reactive({
-		data %>% collect %>%
+		subset <- data
+		
+		if(!input$all){
+			ranges <- as.character(input$dates)
+			mindate <- ranges[1]
+			maxdate <- ranges[2]
+			subset <- data %>% filter(date >= mindate & date <= maxdate)
+		}
+		
+		subset %>% collect %>%
 		mutate(date = as.POSIXct(strptime(date, format="%F %T"))) %>%
 		group_by(sensor,reading) %>%
 		mutate(SMA = rollmean(value,input$sma_window,fill="expand"))
@@ -29,12 +45,9 @@ shinyServer(function(input, output){
     }
 	
   plot <- long() %>% ggplot(aes_string("date", response, colour="sensor")) 
-		if(input$raw){
-			plot <- plot + geom_line()
-		}
-		if(input$smooth){
-			plot <- plot + geom_smooth()
-		}
+		plot <- plot + geom_line()
+		
+		
 		if(input$rug){
 			plot <- plot + geom_rug(sides="b", alpha=0.2, colour="black",size=0.1)
 		}
