@@ -5,43 +5,30 @@ library(ggplot2)
 library(zoo)
 library(scales)
 
-DATA_SRC <- "../temperature.csv"
+db <- src_mysql("sensors", "bmo.local", user="", port=3306)
+#names(data)<- c("Date", "Sensor", "Temperature", "Humidity")
 
-data <- read.csv(DATA_SRC,header=F)
-names(data)<- c("Date", "Sensor", "Temperature", "Humidity")
+data <- tbl(db, "logs")
 
-data <- data %>% 
-	filter(Temperature != 0 & Humidity != 0) %>%
-	mutate(
-		Temperature = Temperature * ifelse(Temperature <= 5, 10,1),
-		Humidity = Humidity * ifelse(Humidity <= 5, 10,1)
-	)
-
-data$Date <- as.POSIXct(strptime(data$Date, format="%F %T"))
-
-data$Humidity[data$Humidity < 0] <- NA
-data$Temperature[data$Temperature < 0] <- NA
 
 theme_set(theme_minimal())
 
 shinyServer(function(input, output){
 	
-	wide <- reactive({
-		data %>%
-		group_by(Sensor) %>%
-		mutate(
-			SMA.Temperature = rollmean(Temperature,input$sma_window,fill="expand"),
-			SMA.Humidity       = rollmean(Humidity,input$sma_window,fill="expand") 
-			)})
-	
-long <- reactive({melt(wide(), measure.vars=c("Temperature", "Humidity", "SMA.Temperature","SMA.Humidity"))})
+	long <- reactive({
+		data %>% collect %>%
+		mutate(date = as.POSIXct(strptime(date, format="%F %T"))) %>%
+		group_by(sensor,reading) %>%
+		mutate(SMA = rollmean(value,input$sma_window,fill="expand"))
+	})
   
   output$plot <- renderPlot({
-    variables <- c("Temperature","Humidity")
+    response <- "value"
     if(input$sma){
-      variables <- c("SMA.Temperature","SMA.Humidity")
+			response <- "SMA"
     }
-  plot <- long() %>% filter(variable %in% variables)%>% ggplot(aes(Date, value, colour=Sensor)) 
+	
+  plot <- long() %>% ggplot(aes_string("date", response, colour="sensor")) 
 		if(input$raw){
 			plot <- plot + geom_line()
 		}
@@ -51,7 +38,8 @@ long <- reactive({melt(wide(), measure.vars=c("Temperature", "Humidity", "SMA.Te
 		if(input$rug){
 			plot <- plot + geom_rug(sides="b", alpha=0.2, colour="black",size=0.1)
 		}
-		plot <- plot + scale_x_datetime(breaks=date_breaks("4 hour"), minor_breaks=date_breaks("1 hour"), labels=date_format("%d %b %H:%M"))  + theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) + xlab("\n\nTime") + facet_grid(variable ~ ., scales="free_y")
+#		plot <- plot + scale_x_datetime(breaks=date_breaks("4 hour"), minor_breaks=date_breaks("1 hour"), labels=date_format("%d %b %H:%M"))  
+		plot <- plot + theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1)) + xlab("\n\nTime") + facet_grid(reading ~ ., scales="free_y")
 		
 		#
 		plot
