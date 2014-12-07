@@ -10,19 +10,28 @@ db <- src_mysql("sensors", "bmo.local", user="", port=3306)
 
 data <- tbl(db, "logs")
 
+data <- data %>% mutate(ip_addr = INET_NTOA(ip))
+
 dates <- data %>% summarise(min = min(date), max=max(date)) %>% collect
 date.min <- dates$min[1]
 date.max <- dates$max[1]
 
 theme_set(theme_minimal())
 
-shinyServer(function(input, output){
-	
-	output$daterange <- renderUI({
-		dateRangeInput("dates","Date Range:", min=date.min, max=date.max)
-		})
-	
-	long <- reactive({
+readTimestamp <- function(){
+		latest <- data %>% summarise(max=max(date)) %>% collect
+		cat("Checking")
+		latest$max[1]
+}
+
+pad_rollmean <- function(value,window){
+	if(window > length(value)){
+		return(as.numeric(c(NA)))
+	}
+	rollmean(value, window, na.pad=TRUE, align="right")
+}
+getLatestData <- function(input){
+	function(){
 		subset <- data
 		
 		if(!input$all){
@@ -31,12 +40,23 @@ shinyServer(function(input, output){
 			maxdate <- ranges[2]
 			subset <- data %>% filter(date >= mindate & date <= maxdate)
 		}
-		
+		cat("Updating")
 		subset %>% collect %>%
 		mutate(date = as.POSIXct(strptime(date, format="%F %T"))) %>%
-		group_by(sensor,reading) %>%
-		mutate(SMA = rollmean(value,input$sma_window,fill="expand"))
-	})
+		group_by(ip,sensor,reading) %>%
+		mutate(SMA = pad_rollmean(value,input$sma_window))
+	}
+	
+}
+
+shinyServer(function(input, output){
+	
+	output$daterange <- renderUI({
+		dateRangeInput("dates","Date Range:", min=date.min, max=date.max)
+		})
+#		reactivePoll(intervalMillis, session, checkFunc,
+#		    valueFunc)
+	long <- reactivePoll(30000,NULL,readTimestamp,getLatestData(input))
   
   output$plot <- renderPlot({
     response <- "value"
@@ -44,7 +64,7 @@ shinyServer(function(input, output){
 			response <- "SMA"
     }
 	
-  plot <- long() %>% ggplot(aes_string("date", response, colour="sensor")) 
+  plot <- long() %>% ggplot(aes_string("date", response, colour="ip_addr",linetype="sensor")) 
 		plot <- plot + geom_line()
 		
 		
